@@ -1,46 +1,50 @@
+import logging
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler, CallbackContext
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
-# Replace 'YOUR_BOT_TOKEN' with your actual bot token
-BOT_TOKEN = 'YOUR_BOT_TOKEN'
+# Set up logging
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-# Conversation states
-START, HOW_ARE_YOU = range(2)
+# Your Telegram Bot API token
+TOKEN = "6526952850:AAH4HpT8gzbxQXGrb4Jl14rRO33FvHQ-6vs"
 
-# Define a dictionary to store user data (in this case, we don't need it)
-user_data = {}
+# Define a function to handle the /start command
+def start(update: Update, context: CallbackContext) -> None:
+    user = update.effective_user
+    update.message.reply_html(f"Hello, {user.mention_html()}!")
 
-def start(update: Update, context: CallbackContext) -> int:
-    user_data.clear()  # Clear any previous user data
-    update.message.reply_text("Hello! How are you?")
-    return HOW_ARE_YOU
+# Define a function to handle incoming messages
+def echo(update: Update, context: CallbackContext) -> None:
+    text = update.message.text
 
-def how_are_you(update: Update, context: CallbackContext) -> int:
-    user_response = update.message.text.lower()
-    
-    if 'fine' in user_response or 'great' in user_response:
-        update.message.reply_text("I'm glad to hear that!")
+    if text == "/start":
+        start(update, context)  # Handle the /start command
+    elif text.lower() == "how are you?":
+        update.message.reply_text("I'm fine.")
+    elif text.lower() == "exit":
+        update.message.reply_text("Goodbye!")
+        updater.stop()  # Gracefully stop the bot
     else:
-        update.message.reply_text("I'm just a bot, but I'm here to help!")
+        update.message.reply_text("Script is outdated")
 
-    return ConversationHandler.END
+def main() -> None:
+    # Create the Updater and pass it your bot's token
+    updater = Updater(token=TOKEN, use_context=True)
 
-def main():
-    updater = Updater(token=BOT_TOKEN, use_context=True)
-    dispatcher = updater.dispatcher
+    # Get the dispatcher to register handlers
+    dp = updater.dispatcher
 
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
-        states={
-            HOW_ARE_YOU: [MessageHandler(Filters.text & ~Filters.command, how_are_you)],
-        },
-        fallbacks=[],
-    )
+    # Register the /start command handler
+    dp.add_handler(CommandHandler("start", start))
 
-    dispatcher.add_handler(conv_handler)
+    # Register a message handler to respond to incoming messages
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, echo))
 
+    # Start the Bot
     updater.start_polling()
+
+    # Run the bot until the user presses Ctrl-C to exit
     updater.idle()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
