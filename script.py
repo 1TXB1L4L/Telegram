@@ -1,37 +1,46 @@
-import telepot
-from telepot.loop import MessageLoop
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler, CallbackContext
 
 # Replace 'YOUR_BOT_TOKEN' with your actual bot token
 BOT_TOKEN = '6526952850:AAH4HpT8gzbxQXGrb4Jl14rRO33FvHQ-6vs'
 
-# Dictionary to store user data
+# Conversation states
+START, HOW_ARE_YOU = range(2)
+
+# Define a dictionary to store user data (in this case, we don't need it)
 user_data = {}
 
-def handle_start(msg):
-    chat_id = msg['chat']['id']
-    bot.sendMessage(chat_id, "Hello! What's your first name?")
-    user_data[chat_id] = {'state': 'first_name'}
+def start(update: Update, context: CallbackContext) -> int:
+    user_data.clear()  # Clear any previous user data
+    update.message.reply_text("Hello! How are you?")
+    return HOW_ARE_YOU
 
-def handle_message(msg):
-    chat_id = msg['chat']['id']
-    user_id = msg['from']['id']
+def how_are_you(update: Update, context: CallbackContext) -> int:
+    user_response = update.message.text.lower()
+    
+    if 'fine' in user_response or 'great' in user_response:
+        update.message.reply_text("I'm glad to hear that!")
+    else:
+        update.message.reply_text("I'm just a bot, but I'm here to help!")
 
-    if user_id in user_data:
-        state = user_data[user_id]['state']
+    return ConversationHandler.END
 
-        if state == 'first_name':
-            user_data[user_id]['first_name'] = msg['text']
-            bot.sendMessage(chat_id, "Great! What's your last name?")
-            user_data[user_id]['state'] = 'last_name'
+def main():
+    updater = Updater(token=BOT_TOKEN, use_context=True)
+    dispatcher = updater.dispatcher
 
-        elif state == 'last_name':
-            user_data[user_id]['last_name'] = msg['text']
-            full_name = f"{user_data[user_id]['first_name']} {user_data[user_id]['last_name']}"
-            bot.sendMessage(chat_id, f"Your full name is: {full_name}")
-            del user_data[user_id]
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('start', start)],
+        states={
+            HOW_ARE_YOU: [MessageHandler(Filters.text & ~Filters.command, how_are_you)],
+        },
+        fallbacks=[],
+    )
 
-bot = telepot.Bot(BOT_TOKEN)
-MessageLoop(bot, {'chat': handle_start, 'text': handle_message}).run_as_thread()
+    dispatcher.add_handler(conv_handler)
 
-while True:
-    pass
+    updater.start_polling()
+    updater.idle()
+
+if __name__ == '__main__':
+    main()
